@@ -421,3 +421,5 @@ FodyWeavers.xsd
 # Build
 bin/
 obj/
+.release-staging/
+artifacts/
