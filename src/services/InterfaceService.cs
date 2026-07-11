@@ -18,6 +18,7 @@ public class InterfaceService
     private readonly IStringLocalizer _localizer;
     private readonly Func<float, Action, TimerFlags?, CounterStrikeSharp.API.Modules.Timers.Timer> _addTimer;
     private string _currentHudText = string.Empty;
+    private CounterStrikeSharp.API.Modules.Timers.Timer? _hudTimer;
 
     // Cached every second in StartHud() to avoid calling GetPlayers() on every tick
     private List<CCSPlayerController> _activePlayers = new();
@@ -35,12 +36,13 @@ public class InterfaceService
 
     internal void StartHud()
     {
-        _addTimer(1.0f, () =>
+        _hudTimer?.Kill();
+        _hudTimer = _addTimer(0.25f, () =>
         {
             string formattedTime = string.Empty;
             RoundPhase phase = _getRoundPhase();
 
-            if(phase is not RoundPhase.Idle)
+            if (phase is not RoundPhase.Idle)
             {
                 TimeSpan time = TimeSpan.FromSeconds(_getTimeLeft());
                 formattedTime = time.TotalMinutes >= 1 ? $"{(int)time.TotalMinutes}:{time.Seconds:D2}" : $"{time.Seconds}";
@@ -48,7 +50,7 @@ public class InterfaceService
 
             _activePlayers = Utilities.GetPlayers().Where(p => p.IsValid).ToList();
 
-            switch(phase)
+            switch (phase)
             {
                 case RoundPhase.Idle:
                     _currentHudText = _localizer["szm.hud.waiting", _getPlayersCount(), _config.MinPlayers];
@@ -60,17 +62,17 @@ public class InterfaceService
 
                 case RoundPhase.Active:
                     int humans = 0, humansAlive = 0, zombies = 0, zombiesAlive = 0;
-                    foreach(var player in _activePlayers.Where(p => p is not null && p.IsValid))
+                    foreach (var player in _activePlayers.Where(p => p is not null && p.IsValid))
                     {
-                        if(player.Team is CsTeam.CounterTerrorist)
+                        if (player.Team is CsTeam.CounterTerrorist)
                         {
                             humans++;
-                            if(player.PawnIsAlive) humansAlive++;
+                            if (player.PawnIsAlive) humansAlive++;
                         }
-                        else if(player.Team is CsTeam.Terrorist)
+                        else if (player.Team is CsTeam.Terrorist)
                         {
                             zombies++;
-                            if(player.PawnIsAlive) zombiesAlive++;
+                            if (player.PawnIsAlive) zombiesAlive++;
                         }
                     }
 
@@ -81,15 +83,19 @@ public class InterfaceService
                     _currentHudText = _localizer["szm.hud.ended", _getRoundWinner()];
                     break;
             }
+
+            if (string.IsNullOrEmpty(_currentHudText)) return;
+
+            foreach (CCSPlayerController player in _activePlayers.Where(p => p is not null && p.IsValid))
+                player.PrintToCenterHtml(_currentHudText);
         }, TimerFlags.REPEAT);
     }
 
-    internal void OnTick()
-     {
-        if(string.IsNullOrEmpty(_currentHudText)) return;
-        // @TODO: If the player opens the menu, we should not display the HUD.
-
-        foreach(CCSPlayerController player in _activePlayers.Where(p => p is not null && p.IsValid))
-                player.PrintToCenterHtml(_currentHudText);
+    internal void StopHud()
+    {
+        _hudTimer?.Kill();
+        _hudTimer = null;
+        _activePlayers.Clear();
+        _currentHudText = string.Empty;
     }
 }

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "zombie_mode",
+  "name": "SimpleZombieMode",
+  "kind": "game_mode",
+  "version": "",
+  "build_revision": "",
+  "upstream_repo": "simple-cs2/SimpleZombieMode",
+  "upstream_revision": "fa05c5c5b6250c39b9018266ac1f65e2796f94ab",
+  "license": "MIT",
+  "compatibility": {"os": ["linux"], "arch": ["x86_64"], "dotnet_target": "net8.0", "counterstrikesharp_min": 364, "counterstrikesharp_max_tested": 371},
+  "required_paths": ["addons/counterstrikesharp/plugins/SimpleZombieMode/SimpleZombieMode.dll", "addons/counterstrikesharp/plugins/SimpleZombieMode/lang/en.json"],
+  "dependencies": [],
+  "restart_policy": "process",
+  "persistent_paths": ["addons/counterstrikesharp/configs/plugins/SimpleZombieMode/SimpleZombieMode.json"]
+}

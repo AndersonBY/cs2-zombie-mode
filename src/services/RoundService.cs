@@ -48,30 +48,33 @@ public class RoundService
     // Events -->>
     internal void OnPlayerConnect(CCSPlayerController? player)
     {
-        if(player is null || !player.IsValid || Phase is not RoundPhase.Idle) return;
+        if (player is null || !player.IsValid || Phase is not RoundPhase.Idle) return;
 
         _addTimer(0.2f, () => player.Respawn(), null);
         List<CCSPlayerController> players = Utilities.GetPlayers().Where(p => p.IsValid).ToList();
 
-        if(players.Count >= _config.MinPlayers) StartRound();
+        if (players.Count >= _config.MinPlayers) StartRound();
     }
     internal void OnPlayerDisconnect(CCSPlayerController? player)
     {
-        if(player is null || !player.IsValid) return;
+        if (player is null) return;
+
+        _playerService.ForgetPlayer(player.SteamID);
+        if (!player.IsValid) return;
 
         List<CCSPlayerController> players = Utilities.GetPlayers().Where(p => p.IsValid && p != player).ToList();
 
-        switch(Phase)
+        switch (Phase)
         {
             case RoundPhase.Countdown:
-                if(players.Count < _config.MinPlayers)
+                if (players.Count < _config.MinPlayers)
                     StopGame(GameEnd.Canceled);
                 break;
 
             case RoundPhase.Active:
                 int humans = players.Count(p => p.Team == CsTeam.CounterTerrorist);
                 int zombies = players.Count(p => p.Team == CsTeam.Terrorist);
-                if(humans <= 0 || zombies <= 0)
+                if (humans <= 0 || zombies <= 0)
                     StopGame(GameEnd.Canceled);
                 break;
         }
@@ -82,20 +85,21 @@ public class RoundService
         _lastSurvivorBoosted = false;
         List<CCSPlayerController> players = Utilities.GetPlayers().Where(p => p.IsValid && p.PawnIsAlive).ToList();
 
-        if(players.Count < _config.MinPlayers)
+        if (players.Count < _config.MinPlayers)
         {
             Phase = RoundPhase.Idle;
             return;
         }
 
-        foreach(CCSPlayerController player in players)
+        foreach (CCSPlayerController player in players)
         {
+            _playerService.CapturePlayerState(player);
             player.SwitchTeam(CsTeam.CounterTerrorist);
             _addTimer(0.2f, () =>
             {
                 player.Respawn();
 
-                if(player.PlayerPawn.Value is not CCSPlayerPawn pawn)
+                if (player.PlayerPawn.Value is not CCSPlayerPawn pawn)
                     return;
 
                 pawn.Health = _config.HumanHealth;
@@ -106,35 +110,35 @@ public class RoundService
         Phase = RoundPhase.Countdown;
         StartTimer(_config.TimerStartInfection, () => StartInfection(), (timeLeft) =>
         {
-            if(timeLeft <= 5 && timeLeft > 0)
+            if (timeLeft <= 5 && timeLeft > 0)
                 Server.PrintToChatAll(_localizer["szm.round.infection", _localizer["szm.prefix"], timeLeft]);
         });
     }
 
     internal void OnPlayerDeath(CCSPlayerController? victim, CCSPlayerController? killer)
     {
-        if(victim is null || killer is null || !victim.IsValid || !killer.IsValid || Phase is not RoundPhase.Active) return;
+        if (victim is null || killer is null || !victim.IsValid || !killer.IsValid || Phase is not RoundPhase.Active) return;
 
-        if(victim.Team is CsTeam.Terrorist)
+        if (victim.Team is CsTeam.Terrorist)
         {
             int lives = _playerService.RemoveLife(victim.SteamID);
-            if(lives > 0)
+            if (lives > 0)
             {
-                if(lives == 1) victim.PrintToChat(_localizer["szm.zombie.last_life", _localizer["szm.prefix"]]);
+                if (lives == 1) victim.PrintToChat(_localizer["szm.zombie.last_life", _localizer["szm.prefix"]]);
                 _addTimer(_config.ZombieRespawnDelay, () => _playerService.InfectPlayer(victim, null, false), null);
             }
         }
 
-        if(victim.Team == CsTeam.CounterTerrorist && killer.Team == CsTeam.Terrorist)
+        if (victim.Team == CsTeam.CounterTerrorist && killer.Team == CsTeam.Terrorist)
         {
             _addTimer(0.1f, () =>
             {
-                if(!victim.IsValid) return;
+                if (!victim.IsValid) return;
                 _playerService.InfectPlayer(victim, killer?.IsValid == true ? killer : null, true);
             }, null);
 
             CCSPlayerPawn? killerPawn = killer.PlayerPawn.Value;
-            if(killerPawn is not null)
+            if (killerPawn is not null)
                 killerPawn.Health = Math.Min(killerPawn.Health + _config.ZombieHealOnKill, _config.ZombieHealth);
         }
 
@@ -145,20 +149,20 @@ public class RoundService
             int humans = 0;
             int zombies = 0;
 
-            foreach(CCSPlayerController player in players)
-                if(player.Team is CsTeam.CounterTerrorist) humans++;
-                else if(player.Team is CsTeam.Terrorist) zombies++;
-            
-            if(humans is 0 && zombies is not 0) StopGame(GameEnd.ZombieWin);
-            else if(humans is not 0 && zombies is 0) StopGame(GameEnd.HumansWin);
-            else if(humans is 1 && zombies is not 0 && !_lastSurvivorBoosted)
+            foreach (CCSPlayerController player in players)
+                if (player.Team is CsTeam.CounterTerrorist) humans++;
+                else if (player.Team is CsTeam.Terrorist) zombies++;
+
+            if (humans is 0 && zombies is not 0) StopGame(GameEnd.ZombieWin);
+            else if (humans is not 0 && zombies is 0) StopGame(GameEnd.HumansWin);
+            else if (humans is 1 && zombies is not 0 && !_lastSurvivorBoosted)
             {
                 _lastSurvivorBoosted = true;
 
                 CCSPlayerController? human = players.Where(p => p.IsValid && p.PawnIsAlive).FirstOrDefault(p => p.Team == CsTeam.CounterTerrorist);
                 CCSPlayerPawn? pawn = human?.PlayerPawn.Value;
 
-                if(human is null || pawn is null) return;
+                if (human is null || pawn is null) return;
 
                 pawn.Health = _config.SurvivorHealth;
                 pawn.VelocityModifier = _config.SurvivorSpeed;
@@ -178,7 +182,7 @@ public class RoundService
         {
             TimeLeft--;
             OnTick?.Invoke(TimeLeft);
-            if(TimeLeft <= 0)
+            if (TimeLeft <= 0)
             {
                 StopTimer();
                 callback();
@@ -190,7 +194,7 @@ public class RoundService
     {
         List<CCSPlayerController> players = Utilities.GetPlayers().Where(p => p.IsValid && p.PawnIsAlive).ToList();
 
-        if(players.Count < _config.MinPlayers)
+        if (players.Count < _config.MinPlayers)
         {
             Phase = RoundPhase.Idle;
             return;
@@ -218,17 +222,27 @@ public class RoundService
 
         StopTimer();
         _playerService.ResetLives();
+        Server.ExecuteCommand("mp_ignore_round_win_conditions 0");
         Server.ExecuteCommand($"mp_restartgame {_config.TimerRestartGame}");
 
         string key = whoWins switch
         {
-            GameEnd.HumansWin   => "szm.round.humans_win",
-            GameEnd.ZombieWin   => "szm.round.zombies_win",
-            GameEnd.Canceled    => "szm.round.canceled",
-            _                   => "szm.round.ended"
+            GameEnd.HumansWin => "szm.round.humans_win",
+            GameEnd.ZombieWin => "szm.round.zombies_win",
+            GameEnd.Canceled => "szm.round.canceled",
+            _ => "szm.round.ended"
         };
 
         RoundWinners = Regex.Replace(_localizer[key, ""], @"\{[a-z]+\}", "").Trim();
         Server.PrintToChatAll(_localizer[key, _localizer["szm.prefix"]]);
+    }
+
+    internal void Shutdown()
+    {
+        Phase = RoundPhase.Ended;
+        StopTimer();
+        Server.ExecuteCommand("mp_ignore_round_win_conditions 0");
+        _playerService.ResetLives();
+        _playerService.RestorePlayers();
     }
 }

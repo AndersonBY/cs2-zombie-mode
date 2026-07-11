@@ -1,49 +1,36 @@
-# .github/workflows/release.yml
-name: Build and Release SZM
-
-permissions:
-  contents: write
+name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    runs-on: windows-latest
-
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
         with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore SimpleZombieMode.csproj
-
-      - name: Build project
-        run: dotnet build SimpleZombieMode.csproj --configuration Release --no-restore
-
-      - name: Prepare release folder
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path release\SimpleZombieMode
-          Copy-Item "bin\Release\net8.0\SimpleZombieMode.dll" "release\SimpleZombieMode\"
-          Copy-Item -Recurse "lang" "release\SimpleZombieMode\lang"
-
-      - name: Package plugin
-        shell: powershell
-        run: |
-          Compress-Archive -Path release\* -DestinationPath SZM-${{ github.ref_name }}.zip -Force
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
         with:
-          tag_name: ${{ github.ref_name }}
-          files: SZM-${{ github.ref_name }}.zip
+          dotnet-version: 8.0.x
+      - name: Verify source
+        run: |
+          dotnet test tests/SimpleZombieMode.Tests/SimpleZombieMode.Tests.csproj -c Release --nologo
+      - name: Build release assets
+        run: scripts/package-release.sh "${GITHUB_REF_NAME}"
+      - name: Publish GitHub Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            artifacts/*.zip \
+            artifacts/*.zip.sha256 \
+            artifacts/plugin-manifest.json \
+            --verify-tag \
+            --generate-notes \
+            --title "${GITHUB_REF_NAME}"

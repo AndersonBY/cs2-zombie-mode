@@ -1,6 +1,10 @@
+> **MBSifu maintained fork.** This public fork tracks [simple-cs2/SimpleZombieMode](https://github.com/simple-cs2/SimpleZombieMode) and ships reviewed, reproducible Linux releases for MBSifu and the wider CS2 community. See [MAINTENANCE.md](MAINTENANCE.md) before proposing upstream sync or release changes.
+
+[![CI](https://github.com/AndersonBY/cs2-zombie-mode/actions/workflows/ci.yml/badge.svg)](https://github.com/AndersonBY/cs2-zombie-mode/actions/workflows/ci.yml)
+
 # 🧟 SZM — SimpleZombieMode
 
-[![GitHub release](https://img.shields.io/github/v/release/simple-cs2/SimpleZombieMode)](https://github.com/simple-cs2/SimpleZombieMode/releases)
+[![GitHub release](https://img.shields.io/github/v/release/AndersonBY/cs2-zombie-mode)](https://github.com/AndersonBY/cs2-zombie-mode/releases)
 [![GitHub stars](https://img.shields.io/github/stars/simple-cs2/SimpleZombieMode)](https://github.com/simple-cs2/SimpleZombieMode/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/simple-cs2/SimpleZombieMode)](https://github.com/simple-cs2/SimpleZombieMode/issues)
 [![License](https://img.shields.io/github/license/simple-cs2/SimpleZombieMode)](LICENSE)
@@ -29,8 +33,8 @@
 
 ## ⚙️ Installation
 
-1. Download the latest release from [Releases](https://github.com/simple-cs2/SimpleZombieMode/releases)
-2. Extract `SimpleZombieMode` folder to:
+1. Download the `linux-x64.zip` asset from [this fork's Releases](https://github.com/AndersonBY/cs2-zombie-mode/releases)
+2. Extract the archive into `game/csgo/`. It installs the plugin under:
 ```
 csgo/addons/counterstrikesharp/plugins/
 ```
